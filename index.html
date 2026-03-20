@@ -43,7 +43,6 @@
     <a href="#hiring" class="nav-link">Hiring</a>
     <a href="#ipo" class="nav-link">IPO Watch</a>
     <a href="#ma" class="nav-link">M&amp;A</a>
-    <a href="#globe" class="nav-link">Globe</a>
     <a href="#tips" class="nav-link">Tips</a>
   </div>
 </nav>
@@ -188,24 +187,40 @@
   </div>
   <p class="section-intro">The landscape is shifting fast &mdash; but with every change comes opportunity. Here's the macro view and company-by-company breakdown to help you source smarter.</p>
 
-  <!-- Macro Chart -->
-  <div class="chart-container">
-    <div class="chart-stats">
-      <div class="chart-stat">
-        <span class="chart-stat-num" style="color:var(--color-layoff)">51,686</span>
-        <span class="chart-stat-label">Total Affected YTD</span>
-      </div>
-      <div class="chart-stat">
-        <span class="chart-stat-num" style="color:var(--color-market)">102</span>
-        <span class="chart-stat-label">Total Events YTD</span>
-      </div>
-      <div class="chart-stat">
-        <span class="chart-stat-num" style="color:var(--color-rto)">~655</span>
-        <span class="chart-stat-label">Avg per Day (2026)</span>
+  <!-- Macro Stats -->
+  <div class="chart-stats">
+    <div class="chart-stat">
+      <span class="chart-stat-num" style="color:var(--color-layoff)">51,686</span>
+      <span class="chart-stat-label">Total Affected YTD</span>
+    </div>
+    <div class="chart-stat">
+      <span class="chart-stat-num" style="color:var(--color-market)">102</span>
+      <span class="chart-stat-label">Total Events YTD</span>
+    </div>
+    <div class="chart-stat">
+      <span class="chart-stat-num" style="color:var(--color-rto)">~655</span>
+      <span class="chart-stat-label">Avg per Day (2026)</span>
+    </div>
+  </div>
+
+  <!-- Chart + Globe side by side -->
+  <div class="layoff-duo">
+    <div class="chart-container">
+      <div class="chart-wrapper">
+        <canvas id="layoffChart"></canvas>
       </div>
     </div>
-    <div class="chart-wrapper">
-      <canvas id="layoffChart"></canvas>
+    <div class="globe-panel">
+      <div class="globe-panel-header">Where It's Happening</div>
+      <div class="globe-wrapper" id="globe-canvas"></div>
+      <div class="globe-tooltip" id="globe-tooltip"></div>
+      <div class="globe-legend">
+        <div class="globe-legend-item"><span class="globe-legend-dot" style="background:#ff4d4d;width:12px;height:12px;"></span> USA (32,288)</div>
+        <div class="globe-legend-item"><span class="globe-legend-dot" style="background:#ff4d4d;width:8px;height:8px;"></span> Australia (4,250)</div>
+        <div class="globe-legend-item"><span class="globe-legend-dot" style="background:#ff4d4d;width:8px;height:8px;"></span> Germany (4,200)</div>
+        <div class="globe-legend-item"><span class="globe-legend-dot" style="background:#ff4d4d;width:7px;height:7px;"></span> India (2,570)</div>
+        <div class="globe-legend-item"><span class="globe-legend-dot" style="background:#ff4d4d;width:6px;height:6px;"></span> Others (6,300)</div>
+      </div>
     </div>
   </div>
 
@@ -1130,34 +1145,7 @@
 
 <hr class="section-divider">
 
-<!-- ====== 9. GLOBE VISUAL ====== -->
-<section class="section" id="globe">
-  <div class="section-header">
-    <span class="section-tag tag-globe">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-      Globe
-    </span>
-    <h2 class="section-title">Global Layoff Map</h2>
-  </div>
-  <p class="section-intro">Talent disruption is a global phenomenon. Explore where the biggest layoffs of 2026 are concentrated &mdash; drag to rotate, scroll to zoom.</p>
 
-  <div class="globe-container">
-    <div class="globe-wrapper" id="globe-canvas"></div>
-    <div class="globe-tooltip" id="globe-tooltip"></div>
-    <div class="globe-legend">
-      <div class="globe-legend-item"><span class="globe-legend-dot" style="background:#ff4d4d;width:14px;height:14px;"></span> USA (32,288)</div>
-      <div class="globe-legend-item"><span class="globe-legend-dot" style="background:#ff4d4d;width:10px;height:10px;"></span> Australia (4,250)</div>
-      <div class="globe-legend-item"><span class="globe-legend-dot" style="background:#ff4d4d;width:10px;height:10px;"></span> Germany (4,200)</div>
-      <div class="globe-legend-item"><span class="globe-legend-dot" style="background:#ff4d4d;width:9px;height:9px;"></span> India (2,570)</div>
-      <div class="globe-legend-item"><span class="globe-legend-dot" style="background:#ff4d4d;width:8px;height:8px;"></span> Austria (2,000)</div>
-      <div class="globe-legend-item"><span class="globe-legend-dot" style="background:#ff4d4d;width:8px;height:8px;"></span> Netherlands (1,700)</div>
-      <div class="globe-legend-item"><span class="globe-legend-dot" style="background:#ff4d4d;width:7px;height:7px;"></span> Sweden (1,600)</div>
-      <div class="globe-legend-item"><span class="globe-legend-dot" style="background:#ff4d4d;width:7px;height:7px;"></span> UK (1,000)</div>
-    </div>
-  </div>
-</section>
-
-<hr class="section-divider">
 
 <!-- ====== 10. TEAM TIPS ====== -->
 <section class="section" id="tips">
@@ -1441,7 +1429,7 @@ if (container) {
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-  camera.position.z = 3.2;
+  camera.position.z = 2.8;
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setSize(width, height);
@@ -1449,52 +1437,38 @@ if (container) {
   renderer.setClearColor(0x0f1923, 1);
   container.appendChild(renderer.domElement);
 
-  // Globe sphere
-  const globeGeometry = new THREE.SphereGeometry(1, 64, 64);
-  const globeMaterial = new THREE.MeshPhongMaterial({
-    color: 0x162231,
-    emissive: 0x0a1520,
-    specular: 0x2a3f55,
-    shininess: 10,
+  // Dark ocean sphere
+  const globeGeometry = new THREE.SphereGeometry(0.99, 64, 64);
+  const globeMaterial = new THREE.MeshBasicMaterial({
+    color: 0x0f1923,
     transparent: true,
     opacity: 0.95
   });
   const globe = new THREE.Mesh(globeGeometry, globeMaterial);
   scene.add(globe);
 
-  // Wireframe
-  const wireGeometry = new THREE.SphereGeometry(1.002, 36, 18);
-  const wireMaterial = new THREE.MeshBasicMaterial({
-    color: 0x2a3f55,
-    wireframe: true,
-    transparent: true,
-    opacity: 0.2
-  });
-  const wireframe = new THREE.Mesh(wireGeometry, wireMaterial);
-  scene.add(wireframe);
-
   // Atmosphere glow
-  const atmosGeometry = new THREE.SphereGeometry(1.05, 64, 64);
+  const atmosGeometry = new THREE.SphereGeometry(1.06, 64, 64);
   const atmosMaterial = new THREE.MeshBasicMaterial({
     color: 0x38bdf8,
     transparent: true,
-    opacity: 0.05,
+    opacity: 0.04,
     side: THREE.BackSide
   });
-  const atmosphere = new THREE.Mesh(atmosGeometry, atmosMaterial);
-  scene.add(atmosphere);
+  scene.add(new THREE.Mesh(atmosGeometry, atmosMaterial));
 
-  // Lights
-  const ambientLight = new THREE.AmbientLight(0x404060, 0.6);
-  scene.add(ambientLight);
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  directionalLight.position.set(5, 3, 5);
-  scene.add(directionalLight);
-  const pointLight = new THREE.PointLight(0xff7a59, 0.3, 10);
-  pointLight.position.set(-3, 2, 4);
-  scene.add(pointLight);
+  // Convert lat/lon to 3D
+  function latLonToVec3(lat, lon, radius) {
+    const phi = (90 - lat) * (Math.PI / 180);
+    const theta = (lon + 180) * (Math.PI / 180);
+    return new THREE.Vector3(
+      -(radius * Math.sin(phi) * Math.cos(theta)),
+      radius * Math.cos(phi),
+      radius * Math.sin(phi) * Math.sin(theta)
+    );
+  }
 
-  // Country data with lat/lon
+  // Country data
   const countries = [
     { name: 'United States', lat: 37.0902, lon: -95.7129, count: 32288, companies: 'Amazon, Block, Meta, Salesforce, Pinterest, eBay' },
     { name: 'Australia', lat: -25.2744, lon: 133.7751, count: 4250, companies: 'WiseTech, Atlassian' },
@@ -1506,23 +1480,131 @@ if (container) {
     { name: 'United Kingdom', lat: 55.3781, lon: -3.4360, count: 1000, companies: 'Multiple' }
   ];
 
-  // Convert lat/lon to 3D position on sphere
-  function latLonToVec3(lat, lon, radius) {
-    const phi = (90 - lat) * (Math.PI / 180);
-    const theta = (lon + 180) * (Math.PI / 180);
-    return new THREE.Vector3(
-      -(radius * Math.sin(phi) * Math.cos(theta)),
-      radius * Math.cos(phi),
-      radius * Math.sin(phi) * Math.sin(theta)
-    );
+  // Load TopoJSON world borders and draw country outlines
+  fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/land-110m.json')
+    .then(r => r.json())
+    .then(topology => {
+      const land = topojsonFeature(topology, topology.objects.land);
+      drawGeoJSON(land);
+    })
+    .catch(() => {
+      drawGridLines();
+    });
+
+  // Minimal TopoJSON -> GeoJSON decoder
+  function topojsonFeature(topology, obj) {
+    const tf = topology.transform;
+    const arcs = topology.arcs;
+
+    function decodeArc(arcIdx) {
+      let arc = arcs[arcIdx < 0 ? ~arcIdx : arcIdx];
+      let x = 0, y = 0;
+      const coords = arc.map(p => {
+        x += p[0]; y += p[1];
+        return [
+          x * tf.scale[0] + tf.translate[0],
+          y * tf.scale[1] + tf.translate[1]
+        ];
+      });
+      return arcIdx < 0 ? coords.reverse() : coords;
+    }
+
+    function decodeRing(ring) {
+      let coords = [];
+      ring.forEach(idx => {
+        const arc = decodeArc(idx);
+        if (coords.length) arc.shift();
+        coords = coords.concat(arc);
+      });
+      return coords;
+    }
+
+    function decodeGeometry(geom) {
+      if (geom.type === 'Polygon') {
+        return { type: 'Polygon', coordinates: geom.arcs.map(decodeRing) };
+      } else if (geom.type === 'MultiPolygon') {
+        return { type: 'MultiPolygon', coordinates: geom.arcs.map(poly => poly.map(decodeRing)) };
+      }
+      return geom;
+    }
+
+    if (obj.type === 'GeometryCollection') {
+      return {
+        type: 'FeatureCollection',
+        features: obj.geometries.map(g => ({ type: 'Feature', geometry: decodeGeometry(g) }))
+      };
+    }
+    return { type: 'Feature', geometry: decodeGeometry(obj) };
   }
 
-  // Create dots
+  function drawGeoJSON(geojson) {
+    const R = 1.003;
+    const lineVerts = [];
+
+    function processCoords(ring) {
+      for (let i = 0; i < ring.length - 1; i++) {
+        const [lon1, lat1] = ring[i];
+        const [lon2, lat2] = ring[i + 1];
+        if (Math.abs(lon2 - lon1) > 90) continue;
+        const v1 = latLonToVec3(lat1, lon1, R);
+        const v2 = latLonToVec3(lat2, lon2, R);
+        lineVerts.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z);
+      }
+    }
+
+    function processGeometry(geom) {
+      if (geom.type === 'Polygon') {
+        geom.coordinates.forEach(processCoords);
+      } else if (geom.type === 'MultiPolygon') {
+        geom.coordinates.forEach(poly => poly.forEach(processCoords));
+      }
+    }
+
+    if (geojson.type === 'FeatureCollection') {
+      geojson.features.forEach(f => processGeometry(f.geometry));
+    } else if (geojson.type === 'Feature') {
+      processGeometry(geojson.geometry);
+    }
+
+    const bufferGeom = new THREE.BufferGeometry();
+    bufferGeom.setAttribute('position', new THREE.Float32BufferAttribute(lineVerts, 3));
+    const lineMat = new THREE.LineBasicMaterial({
+      color: 0x2a5a7a,
+      transparent: true,
+      opacity: 0.6
+    });
+    const lines = new THREE.LineSegments(bufferGeom, lineMat);
+    scene.add(lines);
+  }
+
+  function drawGridLines() {
+    const R = 1.002;
+    const verts = [];
+    for (let lat = -80; lat <= 80; lat += 20) {
+      for (let lon = -180; lon < 180; lon += 2) {
+        const v1 = latLonToVec3(lat, lon, R);
+        const v2 = latLonToVec3(lat, lon + 2, R);
+        verts.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z);
+      }
+    }
+    for (let lon = -180; lon < 180; lon += 30) {
+      for (let lat = -80; lat < 80; lat += 2) {
+        const v1 = latLonToVec3(lat, lon, R);
+        const v2 = latLonToVec3(lat + 2, lon, R);
+        verts.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z);
+      }
+    }
+    const bg = new THREE.BufferGeometry();
+    bg.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+    scene.add(new THREE.LineSegments(bg, new THREE.LineBasicMaterial({ color: 0x1a3345, transparent: true, opacity: 0.3 })));
+  }
+
+  // Create dots for affected countries
   const dotGroup = new THREE.Group();
   const raycasterTargets = [];
 
   countries.forEach(country => {
-    const scale = Math.max(0.015, Math.min(0.06, Math.sqrt(country.count / 32288) * 0.06));
+    const scale = Math.max(0.015, Math.min(0.05, Math.sqrt(country.count / 32288) * 0.05));
     const dotGeometry = new THREE.SphereGeometry(scale, 16, 16);
     const dotMaterial = new THREE.MeshBasicMaterial({
       color: 0xff4d4d,
@@ -1559,7 +1641,7 @@ if (container) {
   controls.rotateSpeed = 0.5;
   controls.enableZoom = true;
   controls.minDistance = 2;
-  controls.maxDistance = 6;
+  controls.maxDistance = 5;
   controls.enablePan = false;
   controls.autoRotate = true;
   controls.autoRotateSpeed = 0.5;
@@ -1579,8 +1661,8 @@ if (container) {
     if (intersects.length > 0) {
       const data = intersects[0].object.userData;
       tooltip.style.display = 'block';
-      tooltip.style.left = (event.clientX - container.getBoundingClientRect().left + 15) + 'px';
-      tooltip.style.top = (event.clientY - container.getBoundingClientRect().top - 10) + 'px';
+      tooltip.style.left = (event.clientX - rect.left + 15) + 'px';
+      tooltip.style.top = (event.clientY - rect.top - 10) + 'px';
       tooltip.innerHTML = `<strong>${data.name}</strong><br>${data.count.toLocaleString()} affected<br><span style="color:var(--color-text-faint)">${data.companies}</span>`;
     } else {
       tooltip.style.display = 'none';
@@ -1590,6 +1672,9 @@ if (container) {
   container.addEventListener('mouseleave', () => {
     tooltip.style.display = 'none';
   });
+
+  // Ambient light for the dots
+  scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
   // Animation
   function animate() {
@@ -1608,6 +1693,7 @@ if (container) {
     renderer.setSize(w, h);
   });
 }
+
 </script>
 
 </body>
