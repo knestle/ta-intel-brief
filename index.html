@@ -1381,6 +1381,8 @@
 <div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div class="modal">
     <h2 id="modal-title">Submit a Team Tip</h2>
+    <label for="tip-name">Your Name</label>
+    <input type="text" id="tip-name" placeholder="e.g. Jane Smith" maxlength="60">
     <label for="tip-company">Company / Source</label>
     <input type="text" id="tip-company" placeholder="e.g. Stripe, ex-Google, LinkedIn post" maxlength="80">
     <label for="tip-category">Category</label>
@@ -1677,7 +1679,7 @@ function renderTips() {
       </div>
       <span class="card-badge badge-${badgeClass(t.category)}" style="align-self:flex-start">${escHtml(t.category)}</span>
       ${t.note ? `<p class="tip-note">${escHtml(t.note)}</p>` : ''}
-      <span class="tip-meta">${escHtml(t.date)}</span>
+      <span class="tip-meta">${t.submittedBy ? `Submitted by <strong>${escHtml(t.submittedBy)}</strong> &middot; ` : ''}${escHtml(t.date)}</span>
     </div>
   `).join('');
   tipsList.querySelectorAll('.tip-delete').forEach(btn => {
@@ -1716,14 +1718,16 @@ tipCountrySelect.addEventListener('change', () => {
 });
 
 submitBtn.addEventListener('click', () => {
+  const submittedBy = document.getElementById('tip-name').value.trim();
   const company = document.getElementById('tip-company').value.trim();
   const category = document.getElementById('tip-category').value;
   const url = document.getElementById('tip-url').value.trim();
   const note = document.getElementById('tip-note').value.trim();
+  if (!submittedBy) { document.getElementById('tip-name').focus(); return; }
   if (!company) { document.getElementById('tip-company').focus(); return; }
 
   const tipData = {
-    company, category, url, note,
+    submittedBy, company, category, url, note,
     date: new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })
   };
 
@@ -1747,6 +1751,7 @@ submitBtn.addEventListener('click', () => {
   }
 
   overlay.classList.remove('open');
+  document.getElementById('tip-name').value = '';
   document.getElementById('tip-company').value = '';
   document.getElementById('tip-url').value = '';
   document.getElementById('tip-note').value = '';
