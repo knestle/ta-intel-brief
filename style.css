@@ -477,6 +477,9 @@ a:hover { color: var(--color-primary-hover); }
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--color-border-subtle);
   background: var(--color-surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 /* ---- GLOBE (inside panel) ---- */
@@ -523,6 +526,173 @@ a:hover { color: var(--color-primary-hover); }
   display: none;
   white-space: nowrap;
   box-shadow: var(--shadow-md);
+}
+
+/* ---- GLOBE HINT ---- */
+.globe-hint {
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  font-weight: 400;
+  animation: globe-hint-pulse 2s ease-in-out infinite;
+  transition: opacity 0.4s ease;
+}
+@keyframes globe-hint-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* ---- GLOBE INFO PANEL ---- */
+.globe-info {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 25, 35, 0.97);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+.globe-info.open {
+  transform: translateY(0);
+}
+.globe-info-header {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border-subtle);
+  position: relative;
+  flex-shrink: 0;
+}
+.globe-info-close {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-3);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+}
+.globe-info-close:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
+}
+.globe-info-country {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  font-family: var(--font-display);
+  color: var(--color-text);
+  margin-bottom: var(--space-1);
+  padding-right: var(--space-8);
+}
+.globe-info-count {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.globe-info-num {
+  color: var(--color-layoff);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.globe-info-body {
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Info panel table */
+.globe-info-table {
+  margin-bottom: var(--space-3);
+}
+.globe-info-table-header {
+  display: grid;
+  grid-template-columns: 1fr 80px 60px;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-faint);
+  font-weight: 600;
+}
+.globe-info-row {
+  display: grid;
+  grid-template-columns: 1fr 80px 60px;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid rgba(42, 63, 85, 0.3);
+  font-size: var(--text-xs);
+  align-items: center;
+  transition: background 0.15s ease;
+}
+.globe-info-row:hover {
+  background: rgba(255, 122, 89, 0.04);
+}
+.globe-info-row:last-child {
+  border-bottom: none;
+}
+.globe-info-co {
+  color: var(--color-text);
+  font-weight: 600;
+}
+.globe-info-jobs {
+  color: var(--color-layoff);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.globe-info-date {
+  color: var(--color-text-faint);
+  text-align: right;
+}
+
+/* Insight box */
+.globe-info-insight {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-primary-glow);
+  border: 1px solid rgba(255, 122, 89, 0.15);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--color-text);
+  line-height: 1.5;
+}
+.globe-info-insight svg {
+  flex-shrink: 0;
+  color: var(--color-primary);
+  margin-top: 2px;
+}
+
+/* Roles */
+.globe-info-roles {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-subtle);
+}
+.globe-info-roles strong {
+  color: var(--color-hiring);
 }
 
 /* ---- SOURCING TAKEAWAY (section level) ---- */
