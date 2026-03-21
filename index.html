@@ -1393,6 +1393,35 @@
       <option value="M&A">M&amp;A</option>
       <option value="Other">Other</option>
     </select>
+    <div id="tip-layoff-fields">
+      <label for="tip-country">Country</label>
+      <select id="tip-country">
+        <option value="">Select a country...</option>
+        <option value="United States">United States</option>
+        <option value="United Kingdom">United Kingdom</option>
+        <option value="Germany">Germany</option>
+        <option value="France">France</option>
+        <option value="Netherlands">Netherlands</option>
+        <option value="Sweden">Sweden</option>
+        <option value="Denmark">Denmark</option>
+        <option value="Ireland">Ireland</option>
+        <option value="Switzerland">Switzerland</option>
+        <option value="India">India</option>
+        <option value="Australia">Australia</option>
+        <option value="Singapore">Singapore</option>
+        <option value="Japan">Japan</option>
+        <option value="China">China</option>
+        <option value="South Korea">South Korea</option>
+        <option value="Israel">Israel</option>
+        <option value="Canada">Canada</option>
+        <option value="Brazil">Brazil</option>
+        <option value="Mexico">Mexico</option>
+        <option value="other">Other...</option>
+      </select>
+      <input type="text" id="tip-country-other" placeholder="Country name" maxlength="60" style="display:none">
+      <label for="tip-affected"># People Affected (optional)</label>
+      <input type="number" id="tip-affected" placeholder="e.g. 500" min="1">
+    </div>
     <label for="tip-url">Link (optional)</label>
     <input type="url" id="tip-url" placeholder="https://">
     <label for="tip-note">Note</label>
@@ -1673,23 +1702,60 @@ cancelBtn.addEventListener('click', () => overlay.classList.remove('open'));
 overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') overlay.classList.remove('open'); });
 
+// Show/hide layoff-specific fields based on category
+const tipCategorySelect = document.getElementById('tip-category');
+const tipLayoffFields = document.getElementById('tip-layoff-fields');
+const tipCountrySelect = document.getElementById('tip-country');
+const tipCountryOther = document.getElementById('tip-country-other');
+
+tipCategorySelect.addEventListener('change', () => {
+  tipLayoffFields.style.display = tipCategorySelect.value === 'Layoff' ? '' : 'none';
+});
+tipCountrySelect.addEventListener('change', () => {
+  tipCountryOther.style.display = tipCountrySelect.value === 'other' ? '' : 'none';
+});
+
 submitBtn.addEventListener('click', () => {
   const company = document.getElementById('tip-company').value.trim();
   const category = document.getElementById('tip-category').value;
   const url = document.getElementById('tip-url').value.trim();
   const note = document.getElementById('tip-note').value.trim();
   if (!company) { document.getElementById('tip-company').focus(); return; }
-  const tips = loadTips();
-  tips.unshift({
+
+  const tipData = {
     company, category, url, note,
     date: new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })
-  });
+  };
+
+  // Capture layoff-specific fields
+  if (category === 'Layoff') {
+    let country = tipCountrySelect.value;
+    if (country === 'other') country = tipCountryOther.value.trim();
+    const affected = parseInt(document.getElementById('tip-affected').value) || 0;
+    if (country) tipData.country = country;
+    if (affected > 0) tipData.affected = affected;
+  }
+
+  const tips = loadTips();
+  tips.unshift(tipData);
   saveTips(tips);
   renderTips();
+
+  // Notify the globe to refresh if it's a layoff tip with country data
+  if (category === 'Layoff' && tipData.country) {
+    window.dispatchEvent(new CustomEvent('tip-layoff-added', { detail: tipData }));
+  }
+
   overlay.classList.remove('open');
   document.getElementById('tip-company').value = '';
   document.getElementById('tip-url').value = '';
   document.getElementById('tip-note').value = '';
+  document.getElementById('tip-affected').value = '';
+  tipCountrySelect.value = '';
+  tipCountryOther.value = '';
+  tipCountryOther.style.display = 'none';
+  tipCategorySelect.value = 'Layoff';
+  tipLayoffFields.style.display = '';
 });
 
 renderTips();
@@ -1734,9 +1800,7 @@ if (container) {
   // Dark ocean sphere
   const globeGeometry = new THREE.SphereGeometry(0.99, 64, 64);
   const globeMaterial = new THREE.MeshBasicMaterial({
-    color: 0x0f1923,
-    transparent: true,
-    opacity: 0.95
+    color: 0x0f1923, transparent: true, opacity: 0.95
   });
   const globe = new THREE.Mesh(globeGeometry, globeMaterial);
   scene.add(globe);
@@ -1744,14 +1808,10 @@ if (container) {
   // Atmosphere glow
   const atmosGeometry = new THREE.SphereGeometry(1.06, 64, 64);
   const atmosMaterial = new THREE.MeshBasicMaterial({
-    color: 0x38bdf8,
-    transparent: true,
-    opacity: 0.04,
-    side: THREE.BackSide
+    color: 0x38bdf8, transparent: true, opacity: 0.04, side: THREE.BackSide
   });
   scene.add(new THREE.Mesh(atmosGeometry, atmosMaterial));
 
-  // Convert lat/lon to 3D
   function latLonToVec3(lat, lon, radius) {
     const phi = (90 - lat) * (Math.PI / 180);
     const theta = (lon + 180) * (Math.PI / 180);
@@ -1762,13 +1822,35 @@ if (container) {
     );
   }
 
-  // ---- RICH COUNTRY DATA ----
-  const countries = [
+  // ---- COUNTRY COORDINATE LOOKUP ----
+  const COUNTRY_COORDS = {
+    'United States': { lat: 37.09, lon: -95.71, flag: '&#127482;&#127480;' },
+    'Netherlands': { lat: 52.13, lon: 5.29, flag: '&#127475;&#127473;' },
+    'Australia': { lat: -25.27, lon: 133.78, flag: '&#127462;&#127482;' },
+    'India': { lat: 20.59, lon: 78.96, flag: '&#127470;&#127475;' },
+    'Germany': { lat: 51.17, lon: 10.45, flag: '&#127465;&#127466;' },
+    'Sweden': { lat: 60.13, lon: 18.64, flag: '&#127480;&#127466;' },
+    'United Kingdom': { lat: 55.38, lon: -3.44, flag: '&#127468;&#127463;' },
+    'Denmark': { lat: 56.26, lon: 9.50, flag: '&#127465;&#127472;' },
+    'Singapore': { lat: 1.35, lon: 103.82, flag: '&#127480;&#127468;' },
+    'France': { lat: 46.23, lon: 2.21, flag: '&#127467;&#127479;' },
+    'Ireland': { lat: 53.14, lon: -7.69, flag: '&#127470;&#127466;' },
+    'Switzerland': { lat: 46.82, lon: 8.23, flag: '&#127464;&#127469;' },
+    'Japan': { lat: 36.20, lon: 138.25, flag: '&#127471;&#127477;' },
+    'China': { lat: 35.86, lon: 104.20, flag: '&#127464;&#127475;' },
+    'South Korea': { lat: 35.91, lon: 127.77, flag: '&#127472;&#127479;' },
+    'Israel': { lat: 31.05, lon: 34.85, flag: '&#127470;&#127473;' },
+    'Canada': { lat: 56.13, lon: -106.35, flag: '&#127464;&#127462;' },
+    'Brazil': { lat: -14.24, lon: -51.93, flag: '&#127463;&#127479;' },
+    'Mexico': { lat: 23.63, lon: -102.55, flag: '&#127474;&#127485;' },
+    'Austria': { lat: 47.52, lon: 14.55, flag: '&#127462;&#127481;' }
+  };
+
+  // ---- STATIC COUNTRY DATA ----
+  const staticCountries = [
     {
-      name: 'United States',
-      flag: '&#127482;&#127480;',
-      lat: 37.0902, lon: -95.7129,
-      count: 32288,
+      name: 'United States', flag: '&#127482;&#127480;',
+      lat: 37.09, lon: -95.71, count: 32288,
       details: [
         { company: 'Amazon', jobs: '16,000', roles: 'PMs, Ops leaders, AWS eng', date: 'Jan 28' },
         { company: 'Block (Square)', jobs: '4,000', roles: 'Fintech, payments, product', date: 'Feb 27' },
@@ -1785,21 +1867,17 @@ if (container) {
       insight: 'The US accounts for 60%+ of global tech layoffs in 2026. Amazon alone is a third of total cuts. AI restructuring is the dominant driver.'
     },
     {
-      name: 'Netherlands',
-      flag: '&#127475;&#127473;',
-      lat: 52.1326, lon: 5.2913,
-      count: 7700,
+      name: 'Netherlands', flag: '&#127475;&#127473;',
+      lat: 52.13, lon: 5.29, count: 7700,
       details: [
         { company: 'ASML', jobs: '1,700', roles: 'Semiconductor mgmt', date: 'Mar 15' },
         { company: 'Heineken', jobs: '5,000-6,000', roles: 'FMCG ops, supply chain', date: 'Feb 11' }
       ],
-      insight: 'Netherlands is a European hub for semiconductor and FMCG talent. ASML engineers are among the most specialized in the world — EUV lithography expertise is extremely rare.'
+      insight: 'Netherlands is a European hub for semiconductor and FMCG talent. ASML engineers are among the most specialized in the world.'
     },
     {
-      name: 'Australia',
-      flag: '&#127462;&#127482;',
-      lat: -25.2744, lon: 133.7751,
-      count: 4250,
+      name: 'Australia', flag: '&#127462;&#127482;',
+      lat: -25.27, lon: 133.78, count: 4250,
       details: [
         { company: 'WiseTech Global', jobs: '2,000', roles: 'Logistics/supply chain SW', date: 'Feb 25' },
         { company: 'Atlassian', jobs: '1,600', roles: 'Enterprise SaaS, product', date: 'Mar 12' }
@@ -1807,22 +1885,18 @@ if (container) {
       insight: 'Sydney-based tech companies are restructuring around AI. Atlassian\'s CTO departure signals broader leadership churn.'
     },
     {
-      name: 'India',
-      flag: '&#127470;&#127475;',
-      lat: 20.5937, lon: 78.9629,
-      count: 3570,
+      name: 'India', flag: '&#127470;&#127475;',
+      lat: 20.59, lon: 78.96, count: 3570,
       details: [
         { company: 'Livspace', jobs: '1,000', roles: 'Interior design tech, PM', date: 'Mar 9' },
         { company: 'WNS (Capgemini)', jobs: '~1,500', roles: 'AI ops, BPO, delivery', date: 'Ongoing' },
         { company: 'Oracle India', jobs: '~1,000+', roles: 'Cloud, enterprise DB', date: 'Mar 5' }
       ],
-      insight: 'India sees layoffs alongside strong demand — paradox market. AI roles are being created faster than traditional roles are cut. Great nearshoring talent pool.'
+      insight: 'India sees layoffs alongside strong demand. AI roles are being created faster than traditional roles are cut.'
     },
     {
-      name: 'Germany',
-      flag: '&#127465;&#127466;',
-      lat: 51.1657, lon: 10.4515,
-      count: 4200,
+      name: 'Germany', flag: '&#127465;&#127466;',
+      lat: 51.17, lon: 10.45, count: 4200,
       details: [
         { company: 'ams OSRAM', jobs: '2,000', roles: 'Semiconductor, optical eng', date: 'Mar 11' },
         { company: 'SAP (restructuring)', jobs: '~2,200', roles: 'Enterprise SW, cloud', date: 'Ongoing' }
@@ -1830,41 +1904,33 @@ if (container) {
       insight: 'Germany\'s industrial-tech sector is reshaping. Semiconductor and enterprise software talent is entering the market.'
     },
     {
-      name: 'Sweden',
-      flag: '&#127480;&#127466;',
-      lat: 60.1282, lon: 18.6435,
-      count: 1600,
+      name: 'Sweden', flag: '&#127480;&#127466;',
+      lat: 60.13, lon: 18.64, count: 1600,
       details: [
         { company: 'Ericsson', jobs: '1,600', roles: 'Telecom, network, RF eng', date: 'Mar 11' }
       ],
       insight: 'Ericsson\'s multi-year downsizing continues. Telecom engineers with 5G expertise are rare and get rehired fast.'
     },
     {
-      name: 'United Kingdom',
-      flag: '&#127468;&#127463;',
-      lat: 55.3781, lon: -3.4360,
-      count: 1500,
+      name: 'United Kingdom', flag: '&#127468;&#127463;',
+      lat: 55.38, lon: -3.44, count: 1500,
       details: [
         { company: 'Multiple (Meta, Oracle UK)', jobs: '~1,500', roles: 'Engineering, support', date: 'Ongoing' },
         { company: 'Depop (eBay)', jobs: 'TBD', roles: 'Product, eng (London)', date: 'Post-M&A' }
       ],
-      insight: 'London remains a key tech hub. Post-acquisition talent from Depop and HSBC RTO-driven exits create sourcing opportunities.'
+      insight: 'London remains a key tech hub. Post-acquisition talent from Depop and RTO-driven exits create sourcing opportunities.'
     },
     {
-      name: 'Denmark',
-      flag: '&#127465;&#127472;',
-      lat: 56.2639, lon: 9.5018,
-      count: 9000,
+      name: 'Denmark', flag: '&#127465;&#127472;',
+      lat: 56.26, lon: 9.50, count: 9000,
       details: [
         { company: 'Novo Nordisk', jobs: '~9,000', roles: 'Pharma R&D, mfg, commercial', date: 'Feb 2026' }
       ],
-      insight: 'Novo Nordisk is one of the biggest single-company layoffs globally. Pharma R&D and manufacturing talent across Denmark, India, and China.'
+      insight: 'Novo Nordisk is one of the biggest single-company layoffs globally. Pharma R&D and manufacturing talent available.'
     },
     {
-      name: 'Singapore',
-      flag: '&#127480;&#127468;',
-      lat: 1.3521, lon: 103.8198,
-      count: 1000,
+      name: 'Singapore', flag: '&#127480;&#127468;',
+      lat: 1.35, lon: 103.82, count: 1000,
       details: [
         { company: 'Livspace (APAC HQ)', jobs: '~500', roles: 'Design tech, marketplace', date: 'Mar 9' },
         { company: 'Meta Singapore', jobs: '~500', roles: 'Engineering hub', date: 'Mar 14' }
@@ -1873,162 +1939,173 @@ if (container) {
     }
   ];
 
-  // Load TopoJSON world borders and draw country outlines
+  // ---- MERGE TIPS FROM LOCALSTORAGE ----
+  function getLayoffTips() {
+    try {
+      const tips = JSON.parse(localStorage.getItem('talent_talk_tips_2026_w12')) || [];
+      return tips.filter(t => t.category === 'Layoff' && t.country);
+    } catch { return []; }
+  }
+
+  function buildCountries() {
+    // Deep clone static data
+    const merged = JSON.parse(JSON.stringify(staticCountries));
+    const layoffTips = getLayoffTips();
+
+    layoffTips.forEach(tip => {
+      const existing = merged.find(c => c.name === tip.country);
+      if (existing) {
+        // Add to existing country
+        existing.details.push({
+          company: tip.company,
+          jobs: tip.affected ? tip.affected.toLocaleString() : 'TBD',
+          roles: tip.note || 'Team tip',
+          date: tip.date,
+          fromTip: true
+        });
+        if (tip.affected) existing.count += tip.affected;
+      } else {
+        // New country from tip
+        const coords = COUNTRY_COORDS[tip.country];
+        if (coords) {
+          merged.push({
+            name: tip.country,
+            flag: coords.flag || '',
+            lat: coords.lat, lon: coords.lon,
+            count: tip.affected || 0,
+            details: [{
+              company: tip.company,
+              jobs: tip.affected ? tip.affected.toLocaleString() : 'TBD',
+              roles: tip.note || 'Team tip',
+              date: tip.date,
+              fromTip: true
+            }],
+            insight: 'Added by team tip. Click to see details.',
+            fromTip: true
+          });
+        }
+      }
+    });
+
+    return merged;
+  }
+
+  // Load TopoJSON world borders
   fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/land-110m.json')
     .then(r => r.json())
     .then(topology => {
       const land = topojsonFeature(topology, topology.objects.land);
       drawGeoJSON(land);
     })
-    .catch(() => {
-      drawGridLines();
-    });
+    .catch(() => { drawGridLines(); });
 
-  // Minimal TopoJSON -> GeoJSON decoder
   function topojsonFeature(topology, obj) {
     const tf = topology.transform;
     const arcs = topology.arcs;
-
     function decodeArc(arcIdx) {
       let arc = arcs[arcIdx < 0 ? ~arcIdx : arcIdx];
       let x = 0, y = 0;
       const coords = arc.map(p => {
         x += p[0]; y += p[1];
-        return [
-          x * tf.scale[0] + tf.translate[0],
-          y * tf.scale[1] + tf.translate[1]
-        ];
+        return [x * tf.scale[0] + tf.translate[0], y * tf.scale[1] + tf.translate[1]];
       });
       return arcIdx < 0 ? coords.reverse() : coords;
     }
-
     function decodeRing(ring) {
       let coords = [];
-      ring.forEach(idx => {
-        const arc = decodeArc(idx);
-        if (coords.length) arc.shift();
-        coords = coords.concat(arc);
-      });
+      ring.forEach(idx => { const arc = decodeArc(idx); if (coords.length) arc.shift(); coords = coords.concat(arc); });
       return coords;
     }
-
     function decodeGeometry(geom) {
-      if (geom.type === 'Polygon') {
-        return { type: 'Polygon', coordinates: geom.arcs.map(decodeRing) };
-      } else if (geom.type === 'MultiPolygon') {
-        return { type: 'MultiPolygon', coordinates: geom.arcs.map(poly => poly.map(decodeRing)) };
-      }
+      if (geom.type === 'Polygon') return { type: 'Polygon', coordinates: geom.arcs.map(decodeRing) };
+      if (geom.type === 'MultiPolygon') return { type: 'MultiPolygon', coordinates: geom.arcs.map(poly => poly.map(decodeRing)) };
       return geom;
     }
-
     if (obj.type === 'GeometryCollection') {
-      return {
-        type: 'FeatureCollection',
-        features: obj.geometries.map(g => ({ type: 'Feature', geometry: decodeGeometry(g) }))
-      };
+      return { type: 'FeatureCollection', features: obj.geometries.map(g => ({ type: 'Feature', geometry: decodeGeometry(g) })) };
     }
     return { type: 'Feature', geometry: decodeGeometry(obj) };
   }
 
   function drawGeoJSON(geojson) {
-    const R = 1.003;
-    const lineVerts = [];
-
+    const R = 1.003; const lineVerts = [];
     function processCoords(ring) {
       for (let i = 0; i < ring.length - 1; i++) {
-        const [lon1, lat1] = ring[i];
-        const [lon2, lat2] = ring[i + 1];
+        const [lon1, lat1] = ring[i]; const [lon2, lat2] = ring[i + 1];
         if (Math.abs(lon2 - lon1) > 90) continue;
-        const v1 = latLonToVec3(lat1, lon1, R);
-        const v2 = latLonToVec3(lat2, lon2, R);
+        const v1 = latLonToVec3(lat1, lon1, R); const v2 = latLonToVec3(lat2, lon2, R);
         lineVerts.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z);
       }
     }
-
     function processGeometry(geom) {
-      if (geom.type === 'Polygon') {
-        geom.coordinates.forEach(processCoords);
-      } else if (geom.type === 'MultiPolygon') {
-        geom.coordinates.forEach(poly => poly.forEach(processCoords));
-      }
+      if (geom.type === 'Polygon') geom.coordinates.forEach(processCoords);
+      else if (geom.type === 'MultiPolygon') geom.coordinates.forEach(poly => poly.forEach(processCoords));
     }
-
-    if (geojson.type === 'FeatureCollection') {
-      geojson.features.forEach(f => processGeometry(f.geometry));
-    } else if (geojson.type === 'Feature') {
-      processGeometry(geojson.geometry);
-    }
-
+    if (geojson.type === 'FeatureCollection') geojson.features.forEach(f => processGeometry(f.geometry));
+    else if (geojson.type === 'Feature') processGeometry(geojson.geometry);
     const bufferGeom = new THREE.BufferGeometry();
     bufferGeom.setAttribute('position', new THREE.Float32BufferAttribute(lineVerts, 3));
-    const lineMat = new THREE.LineBasicMaterial({
-      color: 0x2a5a7a,
-      transparent: true,
-      opacity: 0.6
-    });
-    const lines = new THREE.LineSegments(bufferGeom, lineMat);
-    scene.add(lines);
+    scene.add(new THREE.LineSegments(bufferGeom, new THREE.LineBasicMaterial({ color: 0x2a5a7a, transparent: true, opacity: 0.6 })));
   }
 
   function drawGridLines() {
-    const R = 1.002;
-    const verts = [];
-    for (let lat = -80; lat <= 80; lat += 20) {
-      for (let lon = -180; lon < 180; lon += 2) {
-        const v1 = latLonToVec3(lat, lon, R);
-        const v2 = latLonToVec3(lat, lon + 2, R);
-        verts.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z);
-      }
+    const R = 1.002; const verts = [];
+    for (let lat = -80; lat <= 80; lat += 20) for (let lon = -180; lon < 180; lon += 2) {
+      const v1 = latLonToVec3(lat, lon, R); const v2 = latLonToVec3(lat, lon + 2, R);
+      verts.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z);
     }
-    for (let lon = -180; lon < 180; lon += 30) {
-      for (let lat = -80; lat < 80; lat += 2) {
-        const v1 = latLonToVec3(lat, lon, R);
-        const v2 = latLonToVec3(lat + 2, lon, R);
-        verts.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z);
-      }
+    for (let lon = -180; lon < 180; lon += 30) for (let lat = -80; lat < 80; lat += 2) {
+      const v1 = latLonToVec3(lat, lon, R); const v2 = latLonToVec3(lat + 2, lon, R);
+      verts.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z);
     }
     const bg = new THREE.BufferGeometry();
     bg.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
     scene.add(new THREE.LineSegments(bg, new THREE.LineBasicMaterial({ color: 0x1a3345, transparent: true, opacity: 0.3 })));
   }
 
-  // ---- CREATE INTERACTIVE DOTS ----
+  // ---- CREATE DOTS WITH LARGE INVISIBLE HITBOXES ----
   const dotGroup = new THREE.Group();
-  const raycasterTargets = [];
+  const raycasterTargets = [];  // these are the INVISIBLE hitbox spheres
   const pulseRings = [];
   let selectedDot = null;
   let hoveredDot = null;
 
-  countries.forEach(country => {
-    const baseScale = Math.max(0.015, Math.min(0.05, Math.sqrt(country.count / 32288) * 0.05));
-    const dotGeometry = new THREE.SphereGeometry(baseScale, 16, 16);
-    const dotMaterial = new THREE.MeshBasicMaterial({
-      color: 0xff4d4d,
-      transparent: true,
-      opacity: 0.9
-    });
-    const dot = new THREE.Mesh(dotGeometry, dotMaterial);
+  function createDot(country) {
+    const baseScale = Math.max(0.018, Math.min(0.05, Math.sqrt(country.count / 32288) * 0.05));
     const pos = latLonToVec3(country.lat, country.lon, 1.02);
+
+    // Visible dot (small, red)
+    const dotGeo = new THREE.SphereGeometry(baseScale, 16, 16);
+    const dotMat = new THREE.MeshBasicMaterial({ color: 0xff4d4d, transparent: true, opacity: 0.9 });
+    const dot = new THREE.Mesh(dotGeo, dotMat);
     dot.position.copy(pos);
-    dot.userData = { ...country, baseScale };
     dotGroup.add(dot);
-    raycasterTargets.push(dot);
+
+    // INVISIBLE hitbox sphere (4x larger for easy clicking)
+    const hitRadius = Math.max(0.06, baseScale * 4);
+    const hitGeo = new THREE.SphereGeometry(hitRadius, 8, 8);
+    const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+    const hitbox = new THREE.Mesh(hitGeo, hitMat);
+    hitbox.position.copy(pos);
+    hitbox.userData = { ...country, baseScale, visibleDot: dot };
+    dotGroup.add(hitbox);
+    raycasterTargets.push(hitbox);
 
     // Pulse ring
-    const ringGeometry = new THREE.RingGeometry(baseScale * 1.5, baseScale * 2.2, 32);
-    const ringMaterial = new THREE.MeshBasicMaterial({
-      color: 0xff4d4d,
-      transparent: true,
-      opacity: 0.3,
-      side: THREE.DoubleSide
-    });
-    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+    const ringGeo = new THREE.RingGeometry(baseScale * 1.5, baseScale * 2.2, 32);
+    const ringMat = new THREE.MeshBasicMaterial({ color: country.fromTip ? 0xff7a59 : 0xff4d4d, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
     ring.position.copy(pos);
     ring.lookAt(new THREE.Vector3(0, 0, 0));
     dotGroup.add(ring);
     pulseRings.push({ ring, dot, baseScale });
-  });
 
+    return { dot, hitbox, ring };
+  }
+
+  // Build initial dots from merged data
+  let countries = buildCountries();
+  countries.forEach(createDot);
   scene.add(dotGroup);
 
   // Controls
@@ -2043,12 +2120,10 @@ if (container) {
   controls.autoRotate = true;
   controls.autoRotateSpeed = 0.5;
 
-  // Raycaster
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
-  raycaster.params.Points = { threshold: 0.1 };
 
-  // ---- HOVER ----
+  // ---- HOVER (uses hitbox targets) ----
   container.addEventListener('mousemove', (event) => {
     const rect = container.getBoundingClientRect();
     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -2059,22 +2134,22 @@ if (container) {
 
     // Reset previous hover
     if (hoveredDot && hoveredDot !== selectedDot) {
-      hoveredDot.material.color.setHex(0xff4d4d);
-      hoveredDot.scale.setScalar(1);
+      const vd = hoveredDot.userData.visibleDot;
+      if (vd) { vd.material.color.setHex(0xff4d4d); vd.scale.setScalar(1); }
     }
 
     if (intersects.length > 0) {
-      const dot = intersects[0].object;
-      hoveredDot = dot;
+      const hitbox = intersects[0].object;
+      hoveredDot = hitbox;
       container.style.cursor = 'pointer';
 
-      // Hover glow
-      if (dot !== selectedDot) {
-        dot.material.color.setHex(0xff8866);
-        dot.scale.setScalar(1.4);
+      const vd = hitbox.userData.visibleDot;
+      if (hitbox !== selectedDot && vd) {
+        vd.material.color.setHex(0xff8866);
+        vd.scale.setScalar(1.4);
       }
 
-      const data = dot.userData;
+      const data = hitbox.userData;
       tooltip.style.display = 'block';
       tooltip.style.left = (event.clientX - rect.left + 15) + 'px';
       tooltip.style.top = (event.clientY - rect.top - 10) + 'px';
@@ -2090,62 +2165,54 @@ if (container) {
     tooltip.style.display = 'none';
     container.style.cursor = 'grab';
     if (hoveredDot && hoveredDot !== selectedDot) {
-      hoveredDot.material.color.setHex(0xff4d4d);
-      hoveredDot.scale.setScalar(1);
+      const vd = hoveredDot.userData.visibleDot;
+      if (vd) { vd.material.color.setHex(0xff4d4d); vd.scale.setScalar(1); }
     }
     hoveredDot = null;
   });
 
   // ---- CLICK -> SHOW INFO PANEL ----
-  container.addEventListener('click', (event) => {
+  function handleDotClick(event, clientX, clientY) {
     const rect = container.getBoundingClientRect();
-    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
 
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObjects(raycasterTargets);
 
     if (intersects.length > 0) {
-      const dot = intersects[0].object;
-      const data = dot.userData;
+      const hitbox = intersects[0].object;
+      const data = hitbox.userData;
 
       // Reset previous selection
       if (selectedDot) {
-        selectedDot.material.color.setHex(0xff4d4d);
-        selectedDot.scale.setScalar(1);
-        selectedDot.material.emissive && selectedDot.material.emissive.setHex(0x000000);
+        const prevVd = selectedDot.userData.visibleDot;
+        if (prevVd) { prevVd.material.color.setHex(0xff4d4d); prevVd.scale.setScalar(1); }
       }
 
-      // Highlight selected
-      selectedDot = dot;
-      dot.material.color.setHex(0xff7a59);
-      dot.scale.setScalar(1.6);
+      selectedDot = hitbox;
+      const vd = hitbox.userData.visibleDot;
+      if (vd) { vd.material.color.setHex(0xff7a59); vd.scale.setScalar(1.6); }
 
-      // Hide hint
       if (globeHint) globeHint.style.opacity = '0';
-
-      // Pause auto-rotate briefly
       controls.autoRotate = false;
       setTimeout(() => { controls.autoRotate = true; }, 8000);
 
-      // Smooth camera rotation toward the selected country
-      const targetPos = latLonToVec3(data.lat, data.lon, 2.8);
-      animateCamera(targetPos);
-
-      // Build info panel content
+      animateCamera(latLonToVec3(data.lat, data.lon, 2.8));
       showInfoPanel(data);
     }
-  });
+  }
+
+  container.addEventListener('click', (e) => handleDotClick(e, e.clientX, e.clientY));
 
   function animateCamera(targetPos) {
     const start = camera.position.clone();
     const end = targetPos.clone().normalize().multiplyScalar(camera.position.length());
     let t = 0;
-    const duration = 60; // frames
-
+    const duration = 60;
     function step() {
       t++;
-      const ease = 1 - Math.pow(1 - t / duration, 3); // easeOutCubic
+      const ease = 1 - Math.pow(1 - t / duration, 3);
       camera.position.lerpVectors(start, end, ease);
       camera.lookAt(0, 0, 0);
       if (t < duration) requestAnimationFrame(step);
@@ -2159,13 +2226,13 @@ if (container) {
 
     let html = '';
 
-    // Company table
     if (data.details && data.details.length > 0) {
       html += '<div class="globe-info-table">';
       html += '<div class="globe-info-table-header"><span>Company</span><span>Cuts</span><span>Date</span></div>';
       data.details.forEach(d => {
+        const tipBadge = d.fromTip ? ' <span class="globe-tip-badge">TIP</span>' : '';
         html += `<div class="globe-info-row">
-          <span class="globe-info-co">${d.company}</span>
+          <span class="globe-info-co">${d.company}${tipBadge}</span>
           <span class="globe-info-jobs">${d.jobs}</span>
           <span class="globe-info-date">${d.date}</span>
         </div>`;
@@ -2173,7 +2240,6 @@ if (container) {
       html += '</div>';
     }
 
-    // Insight box
     if (data.insight) {
       html += `<div class="globe-info-insight">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
@@ -2181,7 +2247,6 @@ if (container) {
       </div>`;
     }
 
-    // Roles affected summary
     if (data.details && data.details.length > 0) {
       const allRoles = data.details.map(d => d.roles).join(', ');
       html += `<div class="globe-info-roles"><strong>Talent available:</strong> ${allRoles}</div>`;
@@ -2191,52 +2256,41 @@ if (container) {
     infoPanel.classList.add('open');
   }
 
-  // Close info panel
   infoClose.addEventListener('click', () => {
     infoPanel.classList.remove('open');
     if (selectedDot) {
-      selectedDot.material.color.setHex(0xff4d4d);
-      selectedDot.scale.setScalar(1);
+      const vd = selectedDot.userData.visibleDot;
+      if (vd) { vd.material.color.setHex(0xff4d4d); vd.scale.setScalar(1); }
       selectedDot = null;
     }
   });
 
-  // Ambient light
   scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
-  // ---- ANIMATION with pulse effect ----
   let clock = 0;
   function animate() {
     requestAnimationFrame(animate);
     clock += 0.02;
     controls.update();
-
-    // Pulse effect on rings
     pulseRings.forEach(({ ring, dot, baseScale }, i) => {
       const phase = clock + i * 0.7;
-      const pulse = 0.15 + 0.15 * Math.sin(phase * 2);
-      ring.material.opacity = pulse;
-      const scaleFactor = 1 + 0.15 * Math.sin(phase * 2);
-      ring.scale.setScalar(scaleFactor);
+      ring.material.opacity = 0.15 + 0.15 * Math.sin(phase * 2);
+      ring.scale.setScalar(1 + 0.15 * Math.sin(phase * 2));
     });
-
     renderer.render(scene, camera);
   }
   animate();
 
-  // Resize handler
   window.addEventListener('resize', () => {
-    const w = container.clientWidth;
-    const h = container.clientHeight;
+    const w = container.clientWidth; const h = container.clientHeight;
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
   });
 
-  // ---- TOUCH SUPPORT for mobile ----
+  // ---- TOUCH SUPPORT ----
   let touchStartTime = 0;
   let touchStartPos = { x: 0, y: 0 };
-
   container.addEventListener('touchstart', (e) => {
     touchStartTime = Date.now();
     touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -2245,37 +2299,46 @@ if (container) {
   container.addEventListener('touchend', (e) => {
     const dt = Date.now() - touchStartTime;
     const touch = e.changedTouches[0];
-    const dx = Math.abs(touch.clientX - touchStartPos.x);
-    const dy = Math.abs(touch.clientY - touchStartPos.y);
-
-    // Only trigger click on quick taps (not drags)
-    if (dt < 300 && dx < 10 && dy < 10) {
-      const rect = container.getBoundingClientRect();
-      mouse.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
-      mouse.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
-
-      raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(raycasterTargets);
-
-      if (intersects.length > 0) {
-        const dot = intersects[0].object;
-        const data = dot.userData;
-
-        if (selectedDot) {
-          selectedDot.material.color.setHex(0xff4d4d);
-          selectedDot.scale.setScalar(1);
-        }
-        selectedDot = dot;
-        dot.material.color.setHex(0xff7a59);
-        dot.scale.setScalar(1.6);
-        if (globeHint) globeHint.style.opacity = '0';
-        controls.autoRotate = false;
-        setTimeout(() => { controls.autoRotate = true; }, 8000);
-        animateCamera(latLonToVec3(data.lat, data.lon, 2.8));
-        showInfoPanel(data);
-      }
+    if (dt < 300 && Math.abs(touch.clientX - touchStartPos.x) < 10 && Math.abs(touch.clientY - touchStartPos.y) < 10) {
+      handleDotClick(e, touch.clientX, touch.clientY);
     }
   }, { passive: true });
+
+  // ---- LISTEN FOR NEW LAYOFF TIPS ----
+  window.addEventListener('tip-layoff-added', (e) => {
+    const tip = e.detail;
+    const coords = COUNTRY_COORDS[tip.country];
+    if (!coords) return;
+
+    // Rebuild merged data
+    countries = buildCountries();
+
+    // Check if this country already has a dot
+    const existingHitbox = raycasterTargets.find(h => h.userData.name === tip.country);
+    if (existingHitbox) {
+      // Update existing dot data
+      const updatedCountry = countries.find(c => c.name === tip.country);
+      if (updatedCountry) {
+        existingHitbox.userData = { ...updatedCountry, baseScale: existingHitbox.userData.baseScale, visibleDot: existingHitbox.userData.visibleDot };
+      }
+    } else {
+      // Create a brand new dot for this country
+      const newCountry = countries.find(c => c.name === tip.country);
+      if (newCountry) createDot(newCountry);
+    }
+
+    // Flash the globe hint
+    if (globeHint) {
+      globeHint.textContent = 'Globe updated!';
+      globeHint.style.opacity = '1';
+      globeHint.style.color = 'var(--color-hiring)';
+      setTimeout(() => {
+        globeHint.textContent = 'Click a dot to explore';
+        globeHint.style.color = '';
+        globeHint.style.opacity = '';
+      }, 3000);
+    }
+  });
 }
 
 </script>

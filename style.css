@@ -983,6 +983,22 @@ a:hover { color: var(--color-primary-hover); }
 .site-footer a { color: var(--color-text-faint); }
 .site-footer a:hover { color: var(--color-primary); }
 
+/* ---- GLOBE TIP BADGE ---- */
+.globe-tip-badge {
+  display: inline-block;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--color-hiring, #ff7a59);
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 4px;
+  vertical-align: middle;
+  line-height: 1.4;
+}
+
 /* ---- RESPONSIVE ---- */
 @media (max-width: 768px) {
   .hero { padding: var(--space-8) var(--space-4) var(--space-6); }
